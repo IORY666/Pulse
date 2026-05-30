@@ -1,0 +1,134 @@
+# Pulse App - Fastlane 自动化部署配置
+# 使用方式: bundle exec fastlane <lane名>
+
+default_platform(:ios)
+
+platform :ios do
+  desc "【一键发布】完整流程: 截图→构建→上传→提交审核"
+  lane :release do
+    # 1. 确保代码最新
+    ensure_git_status_clean
+
+    # 2. 自动截图
+    capture_screenshots
+
+    # 3. 构建
+    build_release
+
+    # 4. 上传到App Store Connect
+    upload_to_app_store(
+      force: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      automatic_release: false,  # 手动发布（审核通过后手动点击发布）
+      phased_release: true       # 分阶段发布（7天内逐步推送给用户）
+    )
+
+    # 5. 通知
+    slack(
+      message: "Pulse 新版本已上传到App Store Connect，等待审核",
+      success: true
+    )
+  rescue => e
+    slack(
+      message: "Pulse 发布流水线失败: #{e.message}",
+      success: false
+    )
+    raise
+  end
+
+  desc "【截图】自动生成App Store预览截图（需要模拟器）"
+  lane :capture_screenshots do
+    snapshot(
+      devices: [
+        "iPhone 15 Pro Max",     # 6.7寸
+        "iPhone 14 Pro Max",     # 6.7寸
+      ],
+      languages: ["zh-Hans"],
+      scheme: "Pulse",
+      output_directory: "fastlane/screenshots",
+      clear_previous_screenshots: true,
+      override_status_bar: true,
+      localize_simulator: true,
+    )
+  end
+
+  desc "【构建】Release版本的IPA"
+  lane :build_release do
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1
+    )
+
+    gym(
+      scheme: "Pulse",
+      configuration: "Release",
+      export_method: "app-store",
+      include_symbols: true,
+      output_directory: "fastlane/build",
+    )
+  end
+
+  desc "【测试】运行单元测试"
+  lane :test do
+    run_tests(
+      scheme: "Pulse",
+      devices: ["iPhone 15 Pro"],
+    )
+  end
+
+  desc "【上传TestFlight】给内部测试人员"
+  lane :beta do
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1
+    )
+
+    gym(
+      scheme: "Pulse",
+      configuration: "Release",
+      export_method: "app-store",
+    )
+
+    upload_to_testflight(
+      skip_waiting_for_build_processing: false,
+      distribute_external: false,
+      changelog: "内部测试版本 - 请测试新功能并反馈",
+    )
+
+    slack(message: "Pulse 新Build已上传TestFlight")
+  end
+
+  desc "【元数据】同步App Store元数据"
+  lane :sync_metadata do
+    # 从本地metadata文件同步到App Store Connect
+    deliver(
+      force: true,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      metadata_path: "fastlane/metadata",
+    )
+  end
+
+  desc "【下载元数据】从App Store Connect下载现有元数据"
+  lane :download_metadata do
+    deliver(
+      force: true,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      metadata_path: "fastlane/metadata",
+      overwrite_screenshots: false,
+    )
+  end
+
+  desc "【匹配签名】自动管理证书和配置文件"
+  lane :match_signing do
+    match(
+      type: "appstore",
+      app_identifier: [
+        "com.pulse.habittracker",
+        "com.pulse.habittracker.widget",
+      ],
+      readonly: false,
+      force_for_new_devices: false,
+    )
+  end
+end

@@ -1,0 +1,15 @@
+# Pulse App - Fastlane Appfile
+# Apple Developer账号信息（需要你填写）
+
+# Apple ID邮箱
+apple_id("your-apple-id@email.com")
+
+# App唯一标识符
+app_identifier("com.pulse.habittracker")
+
+# Apple Developer Team ID
+# 在 https://developer.apple.com/account 查看
+team_id("YOUR_TEAM_ID")
+
+# iTunes Connect Team ID（如果与开发者Team不同）
+# itc_team_id("YOUR_ITC_TEAM_ID")

@@ -1,0 +1,42 @@
+# Pulse App - Fastlane Deliverfile (App Store元数据管理)
+
+# App Store Connect信息
+app_identifier("com.pulse.habittracker")
+username("your-apple-id@email.com")
+
+# 元数据目录
+metadata_path("fastlane/metadata")
+
+# 提交选项
+submission_information({
+  add_id_info_uses_idfa: false,
+  export_compliance_uses_encryption: false,
+  export_compliance_encryption_updated: false,
+  content_rights_contains_third_party_content: false,
+})
+
+# 分阶段发布（7天渐进推送）
+phased_release(true)
+
+# 价格
+price_tier(0)  # 免费
+
+# 版权
+copyright("#{Time.now.year} Pulse App")
+
+# 主要语言
+primary_locale("zh-Hans")
+
+# 审核信息
+app_review_information(
+  first_name: "YOUR_FIRST_NAME",
+  last_name: "YOUR_LAST_NAME",
+  phone_number: "YOUR_PHONE",
+  email_address: "your-apple-id@email.com",
+  demo_user: nil,
+  demo_password: nil,
+  notes: "本App免费下载，免费版限制3个习惯。超过3个时触发付费墙（¥36一次性买断解锁Pro版）。所有数据仅存储在用户本地设备和iCloud中，不收集任何用户信息。"
+)
+
+# 自动发布 ✓
+automatic_release(false)

@@ -1,0 +1,26 @@
+# Pulse App - Fastlane Matchfile (证书管理)
+
+# 存储证书的Git仓库URL
+# 创建一个私有GitHub仓库来存储加密的证书
+git_url("git@github.com:YOUR_USERNAME/pulse-certificates.git")
+
+# 存储类型
+storage_mode("git")
+
+# 证书类型
+type("appstore")
+
+# App标识符
+app_identifier([
+  "com.pulse.habittracker",
+  "com.pulse.habittracker.widget",
+])
+
+# Apple Developer账号
+username("your-apple-id@email.com")
+
+# Team ID
+team_id("YOUR_TEAM_ID")
+
+# 生成新的证书（如果不存在）
+force_for_new_devices(false)

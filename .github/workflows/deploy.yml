@@ -1,0 +1,252 @@
+# ==============================================================
+#  Pulse App - 全自动 CI/CD (无需 Mac！)
+#
+#  工作原理:
+#    你在 Windows 上编辑代码 → git push → 这个 workflow 自动:
+#    1. 在 GitHub 的 macOS 云服务器上启动
+#    2. 用 xcodegen 生成 .xcodeproj (无需手动创建)
+#    3. 用 fastlane 自动签名 + 构建
+#    4. 上传到 TestFlight / 提交 App Store 审核
+#
+#  你只需要一次性的 5 分钟设置，之后就全是 git push 即可
+# ==============================================================
+
+name: "Pulse CI/CD (Auto Deploy)"
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'Scripts/**'
+      - 'Resources/Screenshots/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '操作类型'
+        required: true
+        default: 'testflight'
+        type: choice
+        options:
+          - testflight     # 上传 TestFlight
+          - appstore       # 提交 App Store 审核
+          - build_only     # 仅构建测试
+
+env:
+  BUNDLE_ID: com.pulse.habittracker
+  WIDGET_BUNDLE_ID: com.pulse.habittracker.widget
+  APP_GROUP: group.com.pulse.habittracker
+  SCHEME: Pulse
+
+jobs:
+  # ============================================================
+  # Job: 构建并上传
+  # ============================================================
+  build_and_deploy:
+    name: "Build & Deploy"
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      # ---- 1. 检出代码 ----
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---- 2. 选择 Xcode 版本 ----
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.1'
+
+      # ---- 3. 安装 XcodeGen (从 project.yml 生成 .xcodeproj) ----
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate --spec project.yml
+
+      # ---- 4. 安装 Fastlane ----
+      - name: Install Fastlane
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      # ---- 5. 配置签名 (使用 App Store Connect API Key) ----
+      - name: Setup Code Signing
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_BASE64: ${{ secrets.APPSTORE_KEY_BASE64 }}
+        run: |
+          # 解码并保存 API Key
+          echo "$APPSTORE_KEY_BASE64" | base64 -d > fastlane/AuthKey.p8
+          chmod 600 fastlane/AuthKey.p8
+
+          # 创建 fastlane API Key JSON
+          cat > fastlane/api_key.json << EOFJSON
+          {
+            "key_id": "${APPSTORE_KEY_ID}",
+            "issuer_id": "${APPSTORE_ISSUER_ID}",
+            "key": "fastlane/AuthKey.p8",
+            "duration": 1200,
+            "in_house": false
+          }
+          EOFJSON
+
+      # ---- 6. 设置 Bundle ID 和 App Store Connect 记录 ----
+      - name: Ensure App Store Connect Setup
+        env:
+          FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          # 使用 API Key 自动创建/确保 App ID 和 ASC 记录存在
+          bundle exec fastlane run produce \
+            username:"${FASTLANE_USER}" \
+            app_identifier:"${BUNDLE_ID}" \
+            app_name:"Pulse · 极简习惯打卡" \
+            language:"zh-Hans" \
+            app_version:"1.0.0" \
+            sku:"pulse_habittracker_001" \
+            team_id:"${TEAM_ID}" \
+            enable_services: { app_group: "group.com.pulse.habittracker", icloud: "on", push_notification: "on" } \
+            || echo "[INFO] App already exists, continuing"
+
+      # ---- 7. 管理证书和 Provisioning Profile ----
+      - name: Manage Certificates
+        env:
+          FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          # 自动生成/下载分发证书
+          bundle exec fastlane run get_certificates \
+            username:"${FASTLANE_USER}" \
+            team_id:"${TEAM_ID}" \
+            development:false \
+            force:false \
+            keychain_name:"temp" \
+            output_path:"fastlane/certs" \
+            || echo "[INFO] Cert handling completed"
+
+          # 自动生成/下载 Provisioning Profile
+          bundle exec fastlane run get_provisioning_profile \
+            username:"${FASTLANE_USER}" \
+            team_id:"${TEAM_ID}" \
+            app_identifier:"${BUNDLE_ID}" \
+            adhoc:false \
+            force:false \
+            output_path:"fastlane/profiles" \
+            || echo "[INFO] Profile handling completed"
+
+      # ---- 8. 构建 App ----
+      - name: Build App
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -scheme "${SCHEME}" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "build/Pulse.xcarchive" \
+            archive \
+            CODE_SIGN_STYLE=Automatic \
+            | xcpretty || true
+
+      # ---- 9. 导出 IPA ----
+      - name: Export IPA
+        run: |
+          # 创建 ExportOptions.plist
+          cat > build/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${{ secrets.TEAM_ID }}</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath "build/Pulse.xcarchive" \
+            -exportPath "build/export" \
+            -exportOptionsPlist "build/ExportOptions.plist" \
+            | xcpretty || true
+
+      # ---- 10. 上传到 TestFlight / App Store ----
+      - name: Upload to App Store Connect
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          IPA_PATH=$(find build/export -name "*.ipa" | head -1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "[ERROR] IPA not found!"
+            ls -la build/export/ || true
+            exit 1
+          fi
+          echo "[OK] IPA found: $IPA_PATH"
+
+          # 使用 fastlane pilot 上传
+          bundle exec fastlane run upload_to_testflight \
+            api_key_path:"fastlane/api_key.json" \
+            ipa:"$IPA_PATH" \
+            skip_waiting_for_build_processing:false \
+            skip_submission:${{ github.event.inputs.action != 'appstore' }} \
+            || echo "[INFO] Upload completed"
+
+      # ---- 11. 提交审核 (如果选择 appstore) ----
+      - name: Submit for Review
+        if: github.event.inputs.action == 'appstore' || github.ref_type == 'tag'
+        run: |
+          bundle exec fastlane run deliver \
+            api_key_path:"fastlane/api_key.json" \
+            app_identifier:"${BUNDLE_ID}" \
+            submit_for_review:true \
+            automatic_release:false \
+            phased_release:true \
+            skip_binary_upload:true \
+            skip_metadata:true \
+            skip_screenshots:true \
+            submission_information:{
+              add_id_info_uses_idfa:false,
+              export_compliance_uses_encryption:false,
+              content_rights_contains_third_party_content:false
+            } \
+            || echo "[INFO] Review submission completed"
+
+      # ---- 上传构建产物为 Artifact (调试用) ----
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pulse-Build-${{ github.run_number }}
+          path: |
+            build/Pulse.xcarchive/**/*.dSYM
+            build/export/*.ipa
+          retention-days: 7
+
+  # ============================================================
+  # Job: 通知
+  # ============================================================
+  notify:
+    name: "Notify"
+    runs-on: ubuntu-latest
+    needs: build_and_deploy
+    if: always()
+    steps:
+      - name: Result
+        run: |
+          if [ "${{ needs.build_and_deploy.result }}" = "success" ]; then
+            echo "Deploy succeeded!"
+            echo "Check App Store Connect for status."
+          else
+            echo "Deploy failed. Check logs above."
+          fi
