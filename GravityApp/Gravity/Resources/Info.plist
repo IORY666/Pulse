@@ -30,8 +30,24 @@
     </array>
     <key>UIStatusBarStyle</key>
     <string>UIStatusBarStyleDarkContent</string>
+    <key>UIStatusBarHidden</key>
+    <false/>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <true/>
     <key>UIUserInterfaceStyle</key>
     <string>Dark</string>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <!-- 现代 iPhone 全屏适配（消除黑边/letterboxing） -->
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string></string>
+        <key>UIImageName</key>
+        <string></string>
+    </dict>
     <!-- 本地网络访问权限（局域网 WebSocket 连接需要） -->
     <key>NSLocalNetworkUsageDescription</key>
     <string>Gravity 需要通过本地网络连接到你的 Windows Agent 以显示终端和系统信息。</string>
