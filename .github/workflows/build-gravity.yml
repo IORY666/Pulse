@@ -5,6 +5,8 @@ on:
   push:
     branches: [gravity-build]
 
+permissions: write-all
+
 jobs:
   build:
     runs-on: macos-15
@@ -45,15 +47,18 @@ jobs:
 
       - name: 保存错误日志到仓库
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo '```' > GravityApp/BUILD_ERROR.md
           echo '# Build Error Log' >> GravityApp/BUILD_ERROR.md
+          echo '```' >> GravityApp/BUILD_ERROR.md
           tail -100 build.log >> GravityApp/BUILD_ERROR.md
           echo '```' >> GravityApp/BUILD_ERROR.md
           git config user.email "ci@gravity.app"
           git config user.name "Gravity CI"
           git add GravityApp/BUILD_ERROR.md
-          git commit -m "构建错误日志" && git push origin gravity-build || true
+          git commit -m "ci: 构建错误日志" && git push origin gravity-build || true
 
       - name: 打包 IPA
         if: success()
