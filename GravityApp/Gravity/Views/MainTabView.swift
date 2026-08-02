@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// 主界面 — 底部 TabBar（仪表盘 / 终端 / 设置）
 struct MainTabView: View {
