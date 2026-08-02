@@ -191,6 +191,6 @@ struct DashboardView: View {
 
 #Preview {
     let vm = DashboardViewModel()
-    DashboardView(vm, onSessionTap: { _ in }, onSwitchToTerminal: {})
+    DashboardView(viewModel: vm, onSessionTap: { _ in }, onSwitchToTerminal: {})
         .preferredColorScheme(.dark)
 }

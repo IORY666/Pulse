@@ -311,6 +311,6 @@ struct ToggleRow: View {
 #Preview {
     let vm = SettingsViewModel()
     vm.loadSettings()
-    return SettingsView(vm, onConnect: { _, _, _ in }, onDisconnect: {})
+    SettingsView(viewModel: vm, onConnect: { _, _, _ in }, onDisconnect: {})
         .preferredColorScheme(.dark)
 }

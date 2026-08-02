@@ -219,7 +219,7 @@ struct TerminalView: View {
 
 #Preview {
     let vm = TerminalViewModel()
-    TerminalView(vm, onSelectSession: { _ in })
+    TerminalView(viewModel: vm, onSelectSession: { _ in })
         .preferredColorScheme(.dark)
         .onAppear {
             let mock = MockAgentService()
