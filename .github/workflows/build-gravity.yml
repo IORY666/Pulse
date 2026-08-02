@@ -43,13 +43,17 @@ jobs:
             2>&1 | tee ../build.log
           echo "BUILD_EXIT=$?" >> $GITHUB_ENV
 
-      - name: 上传构建日志
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build.log
-          retention-days: 3
+      - name: 保存错误日志到仓库
+        if: failure()
+        run: |
+          echo '```' > GravityApp/BUILD_ERROR.md
+          echo '# Build Error Log' >> GravityApp/BUILD_ERROR.md
+          tail -100 build.log >> GravityApp/BUILD_ERROR.md
+          echo '```' >> GravityApp/BUILD_ERROR.md
+          git config user.email "ci@gravity.app"
+          git config user.name "Gravity CI"
+          git add GravityApp/BUILD_ERROR.md
+          git commit -m "构建错误日志" && git push origin gravity-build || true
 
       - name: 打包 IPA
         if: success()
