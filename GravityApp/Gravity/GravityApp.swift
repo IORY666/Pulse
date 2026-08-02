@@ -8,21 +8,21 @@ struct GravityApp: App {
     let modelContainer: ModelContainer
 
     init() {
+        let container: ModelContainer
         do {
-            // 注册持久化模型
             let schema = Schema([
                 QuickCommandModel.self,
                 ConnectionConfigModel.self,
             ])
             let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-            modelContainer = try ModelContainer(for: schema, configurations: config)
+            container = try ModelContainer(for: schema, configurations: config)
         } catch {
             fatalError("SwiftData 初始化失败: \(error)")
         }
+        modelContainer = container
 
-        // 注入 ModelContext 到 DataStore
         Task { @MainActor in
-            DataStore.shared.modelContext = modelContainer.mainContext
+            DataStore.shared.modelContext = container.mainContext
         }
     }
 

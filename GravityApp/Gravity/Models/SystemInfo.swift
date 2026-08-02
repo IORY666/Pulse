@@ -96,7 +96,7 @@ extension SystemInfo {
             let delta = Double.random(in: -5...5)
             return min(max(val + delta, range.lowerBound), range.upperBound)
         }
-        SystemInfo(
+        return SystemInfo(
             cpu: jitter(cpu, 5...90),
             cpuTemperature: cpuTemperature.map { jitter($0, 40...85) },
             cpuPerCore: cpuPerCore?.map { jitter($0, 5...95) },
