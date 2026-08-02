@@ -152,7 +152,12 @@ final class TerminalViewModel: ObservableObject {
     /// 发送命令
     func sendCommand() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let sessionId = selectedSessionId else { return }
+        guard !text.isEmpty else { return }
+        // 如果没有会话，自动创建一个
+        if selectedSessionId == nil || sessions.isEmpty {
+            createTab(name: "终端 #1")
+        }
+        guard let sessionId = selectedSessionId else { return }
         inputText = ""
 
         if let ws = webSocketService {

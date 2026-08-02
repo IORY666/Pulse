@@ -13,6 +13,7 @@ struct TerminalView: View {
         VStack(spacing: 0) {
             // 标签页栏
             terminalTabBar
+                .padding(.top, 2)
 
             // 连接状态行
             connectionInfoBar
@@ -44,7 +45,7 @@ struct TerminalView: View {
                 }
             )
 
-            // 输入栏
+            // 输入栏（底部加 safe area 适配）
             TerminalInputBar(
                 inputText: $viewModel.inputText,
                 onSend: { viewModel.sendCommand() },
@@ -53,6 +54,7 @@ struct TerminalView: View {
             )
         }
         .background(GravityColors.background)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         // 新建会话 Sheet
         .sheet(isPresented: $showAddSheet) {
             newSessionSheet

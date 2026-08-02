@@ -111,8 +111,15 @@ struct MainTabView: View {
         terminalVM.bind(webSocket: webSocketService)
         settingsVM.bindConnectionState(from: webSocketService.$connectionState.eraseToAnyPublisher())
 
-        // 创建默认终端会话
-        _ = webSocketService.createSession(name: "终端 #1")
+        // 等 WebSocket 连上后再创建会话（避免消息被丢弃）
+        var cancellable: AnyCancellable?
+        cancellable = webSocketService.$connectionState
+            .filter { $0 == .connected }
+            .first()
+            .sink { _ in
+                _ = self.webSocketService.createSession(name: "终端 #1")
+                cancellable?.cancel()
+            }
     }
 
     private func disconnect() {
