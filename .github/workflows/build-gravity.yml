@@ -1,0 +1,51 @@
+name: 构建 Gravity IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [gravity-build]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成 Xcode 项目
+        working-directory: GravityApp
+        run: xcodegen generate
+
+      - name: 构建 (无签名)
+        working-directory: GravityApp
+        run: |
+          xcodebuild build \
+            -project Gravity.xcodeproj \
+            -scheme Gravity \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: 打包 IPA
+        run: |
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Gravity.app" -path "*/Release-iphoneos/*" | head -1)
+          echo "App路径: $APP_PATH"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -r Gravity.ipa Payload
+          ls -lh Gravity.ipa
+
+      - name: 上传 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gravity.ipa
+          path: Gravity.ipa
+          retention-days: 7

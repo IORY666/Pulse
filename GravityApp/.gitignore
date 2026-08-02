@@ -1,0 +1,24 @@
+# Xcode
+*.xcuserdata
+*.xcworkspace/xcuserdata
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+DerivedData/
+build/
+*.xcarchive
+*.ipa
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods
+Pods/
+
+# 环境变量
+.env
+*.xcconfig
+!*.sample.xcconfig
+
+# macOS
+.DS_Store
+Thumbs.db

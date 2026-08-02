@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Gravity</string>
+    <key>CFBundleDisplayName</key>
+    <string>Gravity</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleDarkContent</string>
+    <key>UIUserInterfaceStyle</key>
+    <string>Dark</string>
+    <!-- 本地网络访问权限（局域网 WebSocket 连接需要） -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Gravity 需要通过本地网络连接到你的 Windows Agent 以显示终端和系统信息。</string>
+    <!-- 语音输入权限（P2 功能，提前声明） -->
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Gravity 使用语音识别将你的语音转写为终端命令文本。</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Gravity 需要访问麦克风以进行语音输入。</string>
+    <!-- 禁止任意 HTTP（强制 HTTPS，局域网除外） -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+</dict>
+</plist>
