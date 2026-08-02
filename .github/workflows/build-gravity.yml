@@ -82,3 +82,14 @@ jobs:
           name: Gravity.ipa
           path: Gravity.ipa
           retention-days: 7
+
+      - name: 发布到 Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="gravity-$(date +%Y%m%d-%H%M%S)"
+          gh release create "$TAG" Gravity.ipa \
+            --repo ${{ github.repository }} \
+            --title "Gravity IPA · $(date +%Y-%m-%d\ %H:%M)" \
+            --notes "自动构建的 Gravity iOS App，无签名版本。用 AltStore 签名后安装。"
