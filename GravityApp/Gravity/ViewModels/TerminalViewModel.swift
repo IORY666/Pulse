@@ -121,12 +121,12 @@ final class TerminalViewModel: ObservableObject {
         let sessionName = name ?? "终端 #\(sessions.count + 1)"
         if let ws = webSocketService {
             let sessionId = ws.createSession(name: sessionName)
-            addSession(TerminalSession(id: sessionId, name: sessionName, isRunning: true))
             selectedSessionId = sessionId
+            // 不手动 addSession — 等 Agent 的 session_created 回调来添加
         } else if let mock = mockService {
             let sessionId = mock.createSession(name: sessionName)
-            addSession(TerminalSession(id: sessionId, name: sessionName, isRunning: true))
             selectedSessionId = sessionId
+            // Mock 的 $sessions publisher 会自动同步
         }
     }
 
@@ -213,6 +213,8 @@ final class TerminalViewModel: ObservableObject {
     }
 
     private func addSession(_ session: TerminalSession) {
+        // 防止重复添加
+        guard !sessions.contains(where: { $0.id == session.id }) else { return }
         sessions.append(session)
         if selectedSessionId == nil {
             selectedSessionId = session.id
